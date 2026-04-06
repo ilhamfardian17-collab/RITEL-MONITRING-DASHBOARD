@@ -1149,17 +1149,62 @@ async function fetchGoogleSheetsData(csvUrl) {
 }
 
 function parseCSVToRows(csvText) {
-  const lines = csvText.split('\n').filter(l => l.trim());
-  if (lines.length < 2) throw new Error('Data kosong atau format tidak sesuai');
-  const headers = parseCSVLine(lines[0]);
+  // Fix CRLF and normalize
+  const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  // Parse CSV properly handling quoted multiline fields
+  const records = parseCSVFull(text);
+  if (records.length < 2) throw new Error('Data kosong atau format tidak sesuai');
+  const headers = records[0].map(h => h.trim());
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = parseCSVLine(lines[i]);
+  for (let i = 1; i < records.length; i++) {
+    const vals = records[i];
+    if (!vals || vals.length === 0) continue;
     const obj = {};
-    headers.forEach((h, idx) => { obj[h.trim()] = (vals[idx] || '').trim(); });
+    headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim(); });
     rows.push(obj);
   }
   return rows.map(parseRow).filter(r => r.noPA);
+}
+
+// Robust CSV parser that handles: quoted fields, multiline cells, embedded commas
+function parseCSVFull(text) {
+  const records = [];
+  let i = 0, n = text.length;
+  while (i < n) {
+    const record = [];
+    // Parse one record (row)
+    while (i < n) {
+      let field = '';
+      if (text[i] === '"') {
+        // Quoted field
+        i++; // skip opening quote
+        while (i < n) {
+          if (text[i] === '"') {
+            if (i + 1 < n && text[i+1] === '"') {
+              field += '"'; i += 2; // escaped quote
+            } else {
+              i++; break; // closing quote
+            }
+          } else {
+            field += text[i++];
+          }
+        }
+      } else {
+        // Unquoted field
+        while (i < n && text[i] !== ',' && text[i] !== '\n') {
+          field += text[i++];
+        }
+      }
+      record.push(field.replace(/\r$/, ''));
+      if (i < n && text[i] === ',') { i++; continue; }
+      break;
+    }
+    if (i < n && text[i] === '\n') i++;
+    if (record.length > 0 && !(record.length === 1 && record[0] === '')) {
+      records.push(record);
+    }
+  }
+  return records;
 }
 
 function parseCSVLine(line) {
