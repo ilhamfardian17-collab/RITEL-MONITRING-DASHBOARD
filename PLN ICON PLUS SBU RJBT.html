@@ -407,6 +407,31 @@ td .edit-btn:hover{background:var(--pln-blue2);color:#fff}
 @media(max-width:1100px){.charts-row{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.topbar{height:90px}.pln-logo-img{width:54px;height:54px}.topbar-text h1{font-size:13px}.kpi-row{grid-template-columns:repeat(4,1fr)}.charts-row{grid-template-columns:1fr}.main{padding:14px}.filterbar{padding:9px 14px}}
 @media(max-width:480px){.kpi-row{grid-template-columns:repeat(2,1fr)}.topbar-inner{padding:0 14px}.ws-features{flex-direction:column}}
+
+/* ── GOOGLE SHEETS INTEGRATION ── */
+.gs-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--text3);font-size:12px;font-weight:600}
+.gs-divider::before,.gs-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.gs-connect-box{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid #6ee7b7;border-radius:14px;padding:20px;margin-bottom:10px}
+.gs-connect-box h4{font-size:13px;font-weight:800;color:#065f46;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.gs-connect-box p{font-size:11px;color:#047857;margin-bottom:12px;line-height:1.5}
+.gs-input-row{display:flex;gap:8px;align-items:center}
+.gs-url-input{flex:1;border:1.5px solid #6ee7b7;background:#fff;color:var(--text);padding:9px 12px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;transition:border-color .2s}
+.gs-url-input:focus{border-color:#059669}
+.gs-btn-connect{background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;transition:opacity .2s}
+.gs-btn-connect:hover{opacity:.88}
+.gs-btn-connect:disabled{opacity:.5;cursor:not-allowed}
+.gs-status{font-size:11px;margin-top:8px;padding:6px 10px;border-radius:6px;display:none}
+.gs-status.ok{background:#d1fae5;color:#065f46;display:block}
+.gs-status.err{background:#fee2e2;color:#991b1b;display:block}
+.gs-status.loading{background:#dbeafe;color:#1e40af;display:block}
+.gs-sync-pill{display:none;align-items:center;gap:6px;background:rgba(5,150,105,.12);border:1px solid rgba(5,150,105,.3);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;color:#065f46;cursor:pointer}
+.gs-sync-pill.active{display:flex}
+.gs-sync-dot{width:7px;height:7px;border-radius:50%;background:#059669;animation:pulse-green 1.5s infinite}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:.4}}
+.ws-gs-btn{background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;padding:13px 32px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:10px;transition:opacity .2s;margin-top:10px}
+.ws-gs-btn:hover{opacity:.88}
+.gs-howto{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:11px;color:#92400e;line-height:1.7}
+.gs-howto strong{color:#78350f}
 </style>
 </head>
 <body>
@@ -429,6 +454,10 @@ td .edit-btn:hover{background:var(--pln-blue2);color:#fff}
       <div class="save-indicator" id="save-indicator" style="display:none">
         <span class="save-dot" id="save-dot"></span>
         <span id="save-label">Tersimpan</span>
+      </div>
+      <div class="gs-sync-pill" id="gs-sync-pill" onclick="manualRefreshGS()" title="Klik untuk refresh data Google Sheets">
+        <span class="gs-sync-dot"></span>
+        <span id="gs-sync-label">Google Sheets</span>
       </div>
       <button class="btn-top btn-upload-new" id="btn-add-data" onclick="openAddModal()" style="display:none">&#10133; Tambah Data</button>
       <button class="btn-top btn-clear-data" id="btn-clear-data" onclick="openClearModal()" style="display:none">&#128465; Reset</button>
@@ -456,12 +485,29 @@ td .edit-btn:hover{background:var(--pln-blue2);color:#fff}
   <div class="ws-content">
     <div class="ws-logo"></div>
     <h2 class="ws-title">Ritel Monitoring Dashboard</h2>
-    <p class="ws-sub">Sistem monitoring pelaksanaan pekerjaan Ritel PLN Icon Plus<br>SBU Regional Jawa Bagian Tengah. Mulai dengan upload file Excel.</p>
+    <p class="ws-sub">Sistem monitoring pelaksanaan pekerjaan Ritel PLN Icon Plus<br>SBU Regional Jawa Bagian Tengah. Pilih sumber data di bawah.</p>
     <button class="ws-upload-btn" onclick="showUploadOverlay()">
       <span>&#11014;</span> Upload File Excel Monitoring
     </button>
+    <div class="gs-divider">atau gunakan Google Sheets (real-time multi-user)</div>
+    <div class="gs-connect-box" style="text-align:left">
+      <h4>📊 Hubungkan Google Sheets</h4>
+      <p>Paste link Google Sheets kamu. Semua user yang buka dashboard ini akan melihat data yang sama secara real-time.</p>
+      <div class="gs-input-row">
+        <input class="gs-url-input" id="gs-url-welcome" placeholder="https://docs.google.com/spreadsheets/d/...">
+        <button class="gs-btn-connect" onclick="connectGoogleSheets('gs-url-welcome','gs-status-welcome')">🔗 Hubungkan</button>
+      </div>
+      <div class="gs-status" id="gs-status-welcome"></div>
+      <div class="gs-howto" style="margin-top:10px">
+        <strong>Cara mendapatkan link:</strong><br>
+        1. Buka Google Sheets → File → Share → <strong>Publish to web</strong><br>
+        2. Pilih Sheet yang berisi data → Format: <strong>Comma-separated values (.csv)</strong><br>
+        3. Klik <strong>Publish</strong> → Copy link → Paste di atas<br>
+        <span style="color:#b45309">💡 Atau share biasa: klik Share → Anyone with link → Copy link</span>
+      </div>
+    </div>
     <div class="ws-features">
-      <div class="ws-feat"><div class="ws-feat-icon">&#129302;</div><div class="ws-feat-title">Deteksi Otomatis</div><div class="ws-feat-desc">PA Close, Instalasi, Done BAI terdeteksi dari kolom STATUS</div></div>
+      <div class="ws-feat"><div class="ws-feat-icon">🔄</div><div class="ws-feat-title">Real-Time Multi-User</div><div class="ws-feat-desc">Update Google Sheets → dashboard semua orang langsung refresh otomatis</div></div>
       <div class="ws-feat"><div class="ws-feat-icon">&#128190;</div><div class="ws-feat-title">Auto-Save Browser</div><div class="ws-feat-desc">Data tersimpan otomatis, sesi terjaga meski tab ditutup</div></div>
       <div class="ws-feat"><div class="ws-feat-icon">&#128196;</div><div class="ws-feat-title">Export Excel</div><div class="ws-feat-desc">Export laporan lengkap dengan rekap summary & log perubahan</div></div>
       <div class="ws-feat"><div class="ws-feat-icon">&#9999;&#65039;</div><div class="ws-feat-title">Edit Progres</div><div class="ws-feat-desc">Update status pekerjaan langsung dari dashboard</div></div>
@@ -486,12 +532,22 @@ td .edit-btn:hover{background:var(--pln-blue2);color:#fff}
   <div class="upload-modal">
     <div class="upload-modal-content">
       <div class="ulogo"></div>
-      <h2>Upload Data Monitoring/h2>
+      <h2>Upload Data Monitoring</h2>
       <p>Upload file Excel (.xlsx) data Monitoring Jawa Tengah.<br>Sistem otomatis mendeteksi <strong>PA Close</strong>, <strong>Instalasi</strong>, <strong>Done BAI</strong> dari kolom <code>STATUS</code>.</p>
       <div class="drop-zone" id="dz1"><p>&#128194; Drag &amp; drop file Excel di sini</p></div>
       <label class="upload-cta" for="file-input">Pilih File Excel (.xlsx / .xls)</label>
       <input type="file" id="file-input" accept=".xlsx,.xls">
       <div class="detect-preview" id="detect-preview-first"></div>
+      <div class="gs-divider">atau hubungkan Google Sheets</div>
+      <div class="gs-connect-box">
+        <h4>📊 Google Sheets (Real-Time Multi-User)</h4>
+        <p>Semua user yang membuka dashboard ini akan melihat data yang sama. Update di Sheets → dashboard refresh otomatis setiap 5 menit.</p>
+        <div class="gs-input-row">
+          <input class="gs-url-input" id="gs-url-overlay" placeholder="Paste link Google Sheets di sini...">
+          <button class="gs-btn-connect" onclick="connectGoogleSheets('gs-url-overlay','gs-status-overlay')">🔗 Hubungkan</button>
+        </div>
+        <div class="gs-status" id="gs-status-overlay"></div>
+      </div>
       <p class="upload-note" id="upload-note">Format: Sheet JTG &middot; Kolom STATUS: PA CLOSE | INSTALASI | DONE BAI | DONE BAI-BAA | BELUM BAI</p>
     </div>
   </div>
@@ -1059,7 +1115,164 @@ function exportExcel(){
 // ══ TOAST ══
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' toast-'+type:'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
 
-window.addEventListener('beforeunload',()=>{if(allData.length>0)saveToStorage();});
+// ══ GOOGLE SHEETS INTEGRATION ══
+const GS_KEY = 'tlpd_gs_url';
+let gsRefreshTimer = null;
+let gsConnected = false;
+
+function convertToCSVUrl(url) {
+  // Handle publish-to-web CSV links (direct)
+  if (url.includes('output=csv') || url.includes('export?format=csv')) return url;
+  // Handle standard spreadsheet links
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!match) return null;
+  const id = match[1];
+  // Extract gid if present
+  const gidMatch = url.match(/[#&?]gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+  return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+}
+
+async function fetchGoogleSheetsData(csvUrl) {
+  // Use CORS proxy for non-published sheets
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(csvUrl)}`;
+  let res;
+  try {
+    res = await fetch(csvUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error('direct failed');
+  } catch(e) {
+    res = await fetch(proxyUrl, { cache: 'no-store' });
+  }
+  if (!res.ok) throw new Error('Gagal mengambil data dari Google Sheets');
+  const text = await res.text();
+  return text;
+}
+
+function parseCSVToRows(csvText) {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) throw new Error('Data kosong atau format tidak sesuai');
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.trim()] = (vals[idx] || '').trim(); });
+    rows.push(obj);
+  }
+  return rows.map(parseRow).filter(r => r.noPA);
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+async function connectGoogleSheets(inputId, statusId) {
+  const url = document.getElementById(inputId).value.trim();
+  const statusEl = document.getElementById(statusId);
+  if (!url) { showGSStatus(statusEl, 'err', '❌ Masukkan URL Google Sheets terlebih dahulu'); return; }
+  const csvUrl = convertToCSVUrl(url);
+  if (!csvUrl) { showGSStatus(statusEl, 'err', '❌ URL tidak valid. Gunakan link Google Sheets yang benar.'); return; }
+  showGSStatus(statusEl, 'loading', '⏳ Menghubungkan ke Google Sheets...');
+  const btn = statusEl.previousElementSibling.querySelector('.gs-btn-connect');
+  if (btn) btn.disabled = true;
+  try {
+    const csv = await fetchGoogleSheetsData(csvUrl);
+    const rows = parseCSVToRows(csv);
+    if (rows.length === 0) throw new Error('Tidak ada data ditemukan. Pastikan nama kolom sesuai.');
+    // Save URL
+    localStorage.setItem(GS_KEY, csvUrl);
+    gsConnected = true;
+    allData = rows; currentFileName = 'Google Sheets';
+    changelog = [];
+    showGSStatus(statusEl, 'ok', `✅ Terhubung! ${rows.length} PA berhasil dimuat dari Google Sheets.`);
+    setTimeout(() => {
+      document.getElementById('restore-banner').classList.remove('show');
+      document.getElementById('welcome-screen').classList.remove('show');
+      showDashboard(); initFilters(); applyFilters(); showDetectPreview(rows);
+      updateDataInfo('📊 Google Sheets · live');
+      startGSAutoRefresh(csvUrl);
+      hideUploadOverlay();
+      showToast('✅ Google Sheets terhubung · ' + rows.length + ' records dimuat', 'green');
+    }, 1200);
+  } catch(e) {
+    showGSStatus(statusEl, 'err', '❌ ' + e.message + '. Pastikan sheet sudah di-publish atau link sudah dibagikan (Anyone with link).');
+    if (btn) btn.disabled = false;
+  }
+}
+
+function showGSStatus(el, type, msg) {
+  el.className = 'gs-status ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function startGSAutoRefresh(csvUrl) {
+  const pill = document.getElementById('gs-sync-pill');
+  const label = document.getElementById('gs-sync-label');
+  pill.classList.add('active');
+  label.textContent = 'Google Sheets · auto-refresh';
+  if (gsRefreshTimer) clearInterval(gsRefreshTimer);
+  gsRefreshTimer = setInterval(() => refreshGS(csvUrl), 5 * 60 * 1000); // 5 menit
+}
+
+async function refreshGS(csvUrl) {
+  const label = document.getElementById('gs-sync-label');
+  label.textContent = '⏳ Memperbarui...';
+  try {
+    const csv = await fetchGoogleSheetsData(csvUrl);
+    const rows = parseCSVToRows(csv);
+    if (rows.length > 0) {
+      allData = rows;
+      initFilters(); applyFilters();
+      const now = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+      label.textContent = `Google Sheets · ${now}`;
+      updateDataInfo('📊 Google Sheets · update ' + now);
+      showToast('🔄 Data Google Sheets diperbarui · ' + rows.length + ' records', 'green');
+    }
+  } catch(e) {
+    label.textContent = 'Google Sheets · gagal refresh';
+    showToast('⚠️ Gagal refresh Google Sheets: ' + e.message);
+  }
+}
+
+function manualRefreshGS() {
+  const csvUrl = localStorage.getItem(GS_KEY);
+  if (csvUrl) refreshGS(csvUrl);
+}
+
+// Auto-connect if URL saved
+window.addEventListener('DOMContentLoaded', () => {
+  const savedGs = localStorage.getItem(GS_KEY);
+  if (savedGs) {
+    setTimeout(async () => {
+      try {
+        const csv = await fetchGoogleSheetsData(savedGs);
+        const rows = parseCSVToRows(csv);
+        if (rows.length > 0) {
+          gsConnected = true;
+          allData = rows; currentFileName = 'Google Sheets';
+          document.getElementById('restore-banner').classList.remove('show');
+          document.getElementById('welcome-screen').classList.remove('show');
+          showDashboard(); initFilters(); applyFilters();
+          updateDataInfo('📊 Google Sheets · live');
+          startGSAutoRefresh(savedGs);
+          showToast('🔄 Google Sheets auto-terhubung · ' + rows.length + ' records', 'green');
+        }
+      } catch(e) { /* fallback to normal init */ }
+    }, 800);
+  }
+});
+
+window.addEventListener('beforeunload',()=>{if(allData.length>0 && !gsConnected)saveToStorage();});
 </script>
 </body>
 </html>
